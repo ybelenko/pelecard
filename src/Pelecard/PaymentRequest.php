@@ -84,6 +84,7 @@ class PaymentRequest implements \JsonSerializable {
   protected $AccessibilityMode;
   protected $TakeIshurPopUp;
   protected $SupportedCards; // Supported credit cards
+  protected $TextOnAskForToken;
 
   // Custom field captions
   protected $CaptionSet;
@@ -246,6 +247,13 @@ class PaymentRequest implements \JsonSerializable {
   }
 
   /**
+   * Set text next to token checkbox on Redirect Landing Page
+   */
+  public function setTextOnAskForToken(?string $text) {
+    $this->TextOnAskForToken = $text;
+  }
+
+  /**
    * Return JSON serialized data
    * @return array
    */
@@ -253,6 +261,16 @@ class PaymentRequest implements \JsonSerializable {
     $serialized = get_object_vars($this);
     if ($serialized['QAResultStatus'] === NULL) {
       unset($serialized['QAResultStatus']);
+    }
+    unset($serialized['TextOnAskForToken']);
+    if (\filter_var($this->CreateToken, \FILTER_VALIDATE_BOOL)) {
+      $AskForToken = [
+        'Enable' => true,
+      ];
+      if (empty($this->TextOnAskForToken) === false) {
+        $AskForToken['TextOnAskForToken'] = $this->TextOnAskForToken;
+      }
+      $serialized['AskForToken'] = $AskForToken;
     }
     return $serialized;
   }
