@@ -249,7 +249,7 @@ class PaymentRequest implements \JsonSerializable {
    * Return JSON serialized data
    * @return array
    */
-  public function jsonSerialize() {
+  public function jsonSerialize(): mixed {
     $serialized = get_object_vars($this);
     if ($serialized['QAResultStatus'] === NULL) {
       unset($serialized['QAResultStatus']);
