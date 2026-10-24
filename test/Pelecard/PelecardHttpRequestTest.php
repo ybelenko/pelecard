@@ -4,6 +4,10 @@
  */
 namespace Pelecard;
 
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Pelecard\PelecardHttpRequest;
 
@@ -80,6 +84,36 @@ class PelecardHttpRequestTest extends TestCase {
         $this->assertEquals($optionValue, $afterConfig[$optionName]);
       }
     }
+  }
+
+  /**
+   * Tests pelecardPostRequest static method sends JSON POST and returns body
+   *
+   * @covers Pelecard\PelecardHttpRequest::pelecardPostRequest
+   */
+  public function testPelecardPostRequest() {
+    $history = [];
+    $handlerStack = HandlerStack::create(new MockHandler([
+      new Response(200, ['Content-Type' => 'application/json'], '{"Error":{"ErrCode":0}}'),
+    ]));
+    $handlerStack->push(Middleware::history($history));
+
+    PelecardHttpRequest::$clientConfig = ['handler' => $handlerStack];
+    try {
+      $result = PelecardHttpRequest::pelecardPostRequest('PaymentGW/init', ['terminal' => '0123456', 'total' => 100]);
+    } finally {
+      PelecardHttpRequest::$clientConfig = null;
+    }
+
+    $this->assertSame('{"Error":{"ErrCode":0}}', $result);
+    $this->assertCount(1, $history);
+    $request = $history[0]['request'];
+    $this->assertSame('POST', $request->getMethod());
+    $this->assertSame(PelecardHttpRequest::GATEWAY_BASE_URI . '/PaymentGW/init', (string) $request->getUri());
+    $this->assertSame('application/json', $request->getHeaderLine('Content-Type'));
+    $this->assertJsonStringEqualsJsonString('{"terminal":"0123456","total":100}', (string) $request->getBody());
+    $this->assertSame(PelecardHttpRequest::CONNECTION_TIMEOUT, $history[0]['options']['connect_timeout']);
+    $this->assertSame(PelecardHttpRequest::REQUEST_TIMEOUT, $history[0]['options']['timeout']);
   }
 
   public function provideWrongConfig() {
